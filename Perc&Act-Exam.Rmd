@@ -1,0 +1,93 @@
+---
+title: "Per&Act-Exam"
+author: "JR"
+date: "9 6 2020"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+pacman::p_load(ggplot2, tidyverse, signal, gridExtra)
+
+
+```
+
+
+## Data loading
+```{r}
+## loading txt data
+data1 <- read_delim(file = "105_1.txt", delim = ",", col_names = FALSE)
+data2 <- read_delim(file = "105_2.txt", delim = ",", col_names = FALSE)
+
+## renaming columns
+data1 <- data1 %>% 
+  rename(time = X1, y = X2, z = X3)
+
+data2 <- data2 %>% 
+  rename(time = X1, y = X2, z = X3)
+
+```
+
+
+## Data plotting
+```{r}
+# as the data frames are of different lengths, the cannot be combined and must be plotted in diffrent geoms
+ggplot(data1, aes(time, y)) + 
+  geom_point(color = "pink") +
+  geom_point(data = data2, aes(time,y), color = "blue") +
+  labs(title = "Visualization of Y coordinate in time of the two trajectories",
+       subtitle = "Pink = first trajectory                 Blue = second trajectory",
+       x = "Time",
+       y = "Y coordinate") 
+```
+
+## Velocity, filter
+```{r}
+## Z velocity
+
+data1$z_vel <- c(0, diff(data1$z) / diff(data1$time))
+
+# the velocity for every data point is calculated with distance from the previous to current Y cordinate, divided by the time taken to execute the movement
+
+# because is the difference between two data points, the first value will alaways miss a value to be compared to, therefore we manually insert a 0 to account for this and have a column of the same length
+
+## plotting Z velocity against time
+ggplot(data1, aes(time, z_vel)) + 
+  geom_point(color = "pink") +
+  labs(title = "Visualization of Z velocity in time of the first trajectory",
+       x = "Time",
+       y = "Z velocity") 
+
+## applying butterworth filter
+
+# making cutoffs
+filter_cutoff <- .1 # setting the cutoff at 1/10-th of Nyquist frequency
+filter_order <- 2
+bw_f <- butter(filter_order, filter_cutoff, type ='low') 
+
+
+# filter application
+data1$z_vel_f <- filtfilt(bw_f, data1$z_vel)
+    
+
+## plotting filtered data vs raw data
+ggplot(data1, aes(time, z_vel)) + 
+  geom_point(color = "red") +
+  geom_point(data = data1, aes(time,z_vel_f), color = "green") +
+  labs(title = "Visualization of filtered vs raw data",
+       subtitle = "Red = raw data                 Green = filtered data",
+       x = "Time",
+       y = "Z velocity") 
+
+# we can see that the actual movement occurs only from aproixmately 1.6s to 3.4s, at least on te Z coordinate
+```
+
+
+
+
+
+
+
+
+
